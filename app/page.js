@@ -1,91 +1,118 @@
-import Image from 'next/image'
-import { Inter } from '@next/font/google'
-import styles from './page.module.css'
+"use client";
+import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import Head from 'next/head';
+import { AiFillCloseCircle } from 'react-icons/ai';
 
-const inter = Inter({ subsets: ['latin'] })
+const API_KEY = '5068b159a5d0e5982cb8000bbaf9b06b';
+const searchMovies = async (query) =>
+{
+  try
+  {
+    const response = await fetch(
+      `https://api.themoviedb.org/3/search/movie?api_key=${ API_KEY }&query=${ query }`
+    );
+    const data = await response.json();
+    return data.results;
+  } catch (error)
+  {
+    console.error('Error', error);
+    return [];
+  }
+};
 
-export default function Home() {
+const getGenreNames = async () =>
+{
+  try
+  {
+    const response = await fetch(
+      `https://api.themoviedb.org/3/genre/movie/list?api_key=${ API_KEY }`
+    );
+    const data = await response.json();
+    const genres = data.genres;
+
+    return genres;
+  } catch (error)
+  {
+    console.error('Error', error);
+    return [];
+  }
+};
+
+
+export default function Home()
+{
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [genres, setGenres] = useState([]);
+
+  const handleSearch = async () =>
+  {
+    const movies = await searchMovies(query);
+    setResults(movies);
+    console.log(movies);
+  };
+
+  const fetchGenres = async () =>
+  {
+    const genresData = await getGenreNames();
+    setGenres(genresData);
+  };
+
+  useEffect(() =>
+  {
+    fetchGenres();
+
+  }, []);
+
+  const getGenreNamesByIds = (genreIds) =>
+  {
+    const genreNames = genreIds.map((genreId) =>
+    {
+      const genre = genres.find((genre) => genre.id === genreId);
+      return genre ? genre.name : '';
+    });
+
+    return genreNames.join(' - ');
+  };
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.js</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
+    <div className="flex flex-col">
+      <form onChange={ handleSearch } className="m-auto mt-10 flex relative">
+        <input
+          type="text"
+          placeholder="Search movies..."
+          value={ query }
+          onChange={ (e) => setQuery(e.target.value) }
+          className='w-72 h-10 outline-none p-4 rounded-md'
         />
-        <div className={styles.thirteen}>
-          <Image src="/thirteen.svg" alt="13" width={40} height={31} priority />
-        </div>
-      </div>
+        { query && <AiFillCloseCircle className='absolute top-3 right-3 cursor-pointer text-gray-300 hover:text-white transition duration-200' onClick={ () => setQuery('') } /> }
+      </form>
 
-      <div className={styles.grid}>
-        <a
-          href="https://beta.nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={inter.className}>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={inter.className}>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>Explore the Next.js 13 playground.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={inter.className}>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+      { query && (
+        <ul className="m-auto transition duration-300">
+          { results.map((movie) => (
+            <li key={ movie.id } className="flex justify-center m-10 cursor-pointer hover:bg-gray-700 rounded-lg transition duration-300">
+              <div className='m-auto p-2 text-left w-1/2'>
+                <p className='text-3xl'>{ movie.title }</p>
+                <p className='text-sm text-gray-500'>{ getGenreNamesByIds(movie.genre_ids) }</p>
+                {/* <p>{if}</p> */ }
+              </div>
+              <Image
+                src={ `https://image.tmdb.org/t/p/w500${ movie.backdrop_path || movie.poster_path
+                  }` }
+                className='w-1/3 rounded-r-md'
+                alt="movie Poster"
+                objectFit="cover"
+                width={ 100 }
+                height={ 100 }
+                sizes='100vh'
+              />
+            </li>
+          )) }
+        </ul>
+      ) }
+    </div>
+  );
 }
+
